@@ -186,11 +186,33 @@
               <th>持续时间</th>
               <th>标签</th>
               <th>创建人</th>
+              <th>归档</th>
             </tr>
           </thead>
           <tbody id="online-experiment-table-body"></tbody>
         </table>
         <div id="online-empty-state" class="online-empty-state hidden">暂无符合条件的实验。</div>
+      </section>
+
+      <section class="online-trash-section">
+        <button type="button" id="online-trash-toggle-btn" class="online-trash-toggle-btn">
+          草稿箱 <span id="online-trash-count" class="online-trash-count">0</span>
+        </button>
+        <div id="online-trash-panel" class="online-trash-panel hidden">
+          <table class="online-table online-trash-table">
+            <thead>
+              <tr>
+                <th>实验名称</th>
+                <th>状态</th>
+                <th>持续时间</th>
+                <th>创建人</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="online-trash-table-body"></tbody>
+          </table>
+          <div id="online-trash-empty-state" class="online-empty-state hidden">草稿箱暂无可见实验。</div>
+        </div>
       </section>
     </section>
 
@@ -225,6 +247,11 @@
 
         <section class="online-detail-panel" data-tab-panel="settings">
           <div class="online-settings-block">
+            <h3>实验名称（*必填项）</h3>
+            <input type="text" id="online-experiment-name-input" class="online-short-input online-experiment-name-input" placeholder="请输入实验名称" />
+          </div>
+
+          <div class="online-settings-block">
             <h3>假说</h3>
             <label class="online-hypothesis-field">
               <span class="online-hypothesis-label">实验假说</span>
@@ -237,7 +264,7 @@
           </div>
 
           <div class="online-settings-block">
-            <h3>主要指标</h3>
+            <h3>主要指标（*必填项）</h3>
             <div class="online-metric-inline">
               <input type="text" id="online-primary-metric-input" class="online-short-input online-metric-input" placeholder="输入主要指标后点击添加" />
               <select id="online-primary-metric-preset-select" class="online-short-input online-metric-preset-select">
@@ -250,7 +277,7 @@
           </div>
 
           <div class="online-settings-block">
-            <h3>次要指标</h3>
+            <h3>次要指标（*必填项）</h3>
             <div class="online-metric-inline">
               <input type="text" id="online-secondary-metric-input" class="online-short-input online-metric-input" placeholder="输入次要指标后点击添加" />
               <select id="online-secondary-metric-preset-select" class="online-short-input online-metric-preset-select">
@@ -263,7 +290,7 @@
           </div>
 
           <div class="online-settings-block">
-            <h3>持续时间</h3>
+            <h3>持续时间（*必填项）</h3>
             <div class="online-duration-row">
               <input type="number" id="online-duration-value-input" class="online-short-input online-duration-input" min="1" max="3650" step="1" value="14" />
               <select id="online-duration-unit-select" class="online-short-input online-duration-select">
@@ -286,13 +313,22 @@
               <label class="online-settings-line">
                 <span class="online-line-title">目标</span>
                 <span>定向规则</span>
-                <input type="text" id="online-target-rule-input" class="online-target-rule-input" value="所有环境" />
+                <select id="online-target-rule-input" class="online-target-rule-input">
+                  <option value="所有环境">所有环境</option>
+                  <option value="正式服">正式服</option>
+                  <option value="RC服">RC服</option>
+                  <option value="测试服A">测试服A</option>
+                  <option value="测试服B">测试服B</option>
+                  <option value="测试服C">测试服C</option>
+                </select>
               </label>
             </div>
+            <div class="online-flow-stem" aria-hidden="true"></div>
+            <div class="online-split-node">分流比例</div>
 
             <div class="online-group-scroll" id="online-group-scroll">
               <div id="online-group-list" class="online-group-list"></div>
-              <button type="button" id="online-add-group-btn" class="online-group-add-btn">+ 新增分组</button>
+              <button type="button" id="online-add-group-btn" class="online-group-add-btn" aria-label="新增分组" title="新增分组">+</button>
             </div>
             <div id="online-group-total-hint" class="online-inline-hint">当前分组分流合计 100%（已平衡）</div>
           </div>

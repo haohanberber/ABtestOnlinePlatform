@@ -1,6 +1,7 @@
 (function () {
   const METRIC_LIMIT = 10;
   const GROUP_LIMIT = 10;
+  const CURRENT_USER_NAME = "当前用户";
   const DEFAULT_METRICS = [
     {
       name: "加入购物车",
@@ -50,11 +51,11 @@
 
   function buildDefaultExperiments() {
     return [
-      { id: "exp-default-1", name: "产品页面改版测试", status: "进行中", durationText: "13天", tags: ["核心", "请勿删除"], creator: "军儿", analysisType: "转化分析" },
-      { id: "exp-default-2", name: "分层定价策略V1", status: "进行中", durationText: "13天", tags: [], creator: "斯克", analysisType: "转化分析" },
-      { id: "exp-default-3", name: "首页横幅测试", status: "进行中", durationText: "336天", tags: ["核心"], creator: "川普", analysisType: "转化分析" },
-      { id: "exp-default-4", name: "蓝色按钮测试", status: "未开始", durationText: "-", tags: [], creator: "仁勋", analysisType: "转化分析" },
-      { id: "exp-default-5", name: "红色按钮变更", status: "已完成", durationText: "40天", tags: [], creator: "泰相", analysisType: "转化分析" }
+      { id: "exp-default-1", name: "产品页面改版测试", status: "进行中", durationText: "13天", tags: ["核心", "请勿删除"], creator: "军儿", analysisType: "转化分析", isCase: true },
+      { id: "exp-default-2", name: "分层定价策略V1", status: "进行中", durationText: "13天", tags: [], creator: "斯克", analysisType: "转化分析", isCase: true },
+      { id: "exp-default-3", name: "首页横幅测试", status: "进行中", durationText: "336天", tags: ["核心"], creator: "川普", analysisType: "转化分析", isCase: true },
+      { id: "exp-default-4", name: "蓝色按钮测试", status: "未开始", durationText: "-", tags: [], creator: "仁勋", analysisType: "转化分析", isCase: true },
+      { id: "exp-default-5", name: "红色按钮变更", status: "已完成", durationText: "40天", tags: [], creator: "泰相", analysisType: "转化分析", isCase: true }
     ];
   }
 
@@ -124,9 +125,15 @@
     const addedFiltersContainer = document.getElementById("online-added-filters");
     const tableBody = document.getElementById("online-experiment-table-body");
     const emptyState = document.getElementById("online-empty-state");
+    const trashToggleButton = document.getElementById("online-trash-toggle-btn");
+    const trashCount = document.getElementById("online-trash-count");
+    const trashPanel = document.getElementById("online-trash-panel");
+    const trashTableBody = document.getElementById("online-trash-table-body");
+    const trashEmptyState = document.getElementById("online-trash-empty-state");
 
     const detailTabButtons = Array.from(document.querySelectorAll(".online-detail-tab-btn"));
     const detailPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+    const experimentNameInput = document.getElementById("online-experiment-name-input");
     const primaryMetricList = document.getElementById("online-primary-metric-list");
     const primaryMetricInput = document.getElementById("online-primary-metric-input");
     const primaryMetricPresetSelect = document.getElementById("online-primary-metric-preset-select");
@@ -174,8 +181,14 @@
       !addedFiltersContainer ||
       !tableBody ||
       !emptyState ||
+      !trashToggleButton ||
+      !trashCount ||
+      !trashPanel ||
+      !trashTableBody ||
+      !trashEmptyState ||
       !detailTabButtons.length ||
       !detailPanels.length ||
+      !experimentNameInput ||
       !primaryMetricList ||
       !primaryMetricInput ||
       !primaryMetricPresetSelect ||
@@ -218,8 +231,10 @@
       currentExperimentId: "",
       detailConfigs: {},
       nextGroupSeq: 1,
-      restoredExperimentIds: {}
+      restoredExperimentIds: {},
+      trashOpen: false
     };
+    let nextCreatedExperimentSeq = 1;
 
     const optionalFilterMetas = {
       analysisType: { label: "分析类型", options: ["全部", "转化分析", "留存分析", "收入分析"] },
@@ -240,6 +255,37 @@
         unique.push(metricName);
       });
       return unique.slice(0, METRIC_LIMIT);
+    }
+
+    function isCaseExperiment(experimentId) {
+      const experiment = getExperimentById(experimentId);
+      return !!(experiment && experiment.isCase);
+    }
+
+    function canManageExperiment(experiment) {
+      return !!experiment && experiment.creator === CURRENT_USER_NAME;
+    }
+
+    function getVisibleTrashExperiments() {
+      return state.experiments.filter((experiment) => experiment.isArchived && canManageExperiment(experiment));
+    }
+
+    function createNewExperiment() {
+      const experiment = {
+        id: "exp-created-" + Date.now() + "-" + nextCreatedExperimentSeq,
+        name: "",
+        status: "未开始",
+        durationText: "14日",
+        tags: [],
+        creator: CURRENT_USER_NAME,
+        analysisType: "转化分析",
+        isCase: false,
+        isDraft: true,
+        isArchived: false
+      };
+      nextCreatedExperimentSeq += 1;
+      state.experiments.unshift(experiment);
+      return experiment;
     }
 
     function normalizeGroups(value, fallbackGroups) {
@@ -328,6 +374,24 @@
         const savedText = window.localStorage.getItem(DETAIL_CONFIG_STORAGE_KEY);
         if (!savedText) return;
         const parsed = JSON.parse(savedText);
+        const savedExperiments = parsed && Array.isArray(parsed.experiments) ? parsed.experiments : [];
+        savedExperiments.forEach((experiment) => {
+          if (!experiment || typeof experiment !== "object") return;
+          const id = toSafeText(experiment.id);
+          if (!id || getExperimentById(id)) return;
+          state.experiments.push({
+            id: id,
+            name: toSafeText(experiment.name, "新建实验"),
+            status: toSafeText(experiment.status, "未开始"),
+            durationText: toSafeText(experiment.durationText, "14日"),
+            tags: Array.isArray(experiment.tags) ? experiment.tags.map((tag) => toSafeText(tag)).filter(Boolean) : [],
+            creator: toSafeText(experiment.creator, CURRENT_USER_NAME),
+            analysisType: toSafeText(experiment.analysisType, "转化分析"),
+            isCase: false,
+            isDraft: false,
+            isArchived: !!experiment.isArchived
+          });
+        });
         const savedConfigs = parsed && typeof parsed === "object" ? parsed.detailConfigs : null;
         if (!savedConfigs || typeof savedConfigs !== "object") return;
 
@@ -338,6 +402,7 @@
         });
 
         state.nextGroupSeq = computeNextGroupSeq(parsed.nextGroupSeq);
+        nextCreatedExperimentSeq = Math.max(nextCreatedExperimentSeq, state.experiments.filter((experiment) => !experiment.isCase).length + 1);
       } catch (error) {
         setHint(settingsSaveHint, "历史设置读取失败，已使用默认配置。", true);
       }
@@ -352,6 +417,7 @@
         const payload = {
           version: 1,
           nextGroupSeq: state.nextGroupSeq,
+          experiments: state.experiments.filter((experiment) => !experiment.isCase && !experiment.isDraft),
           detailConfigs: state.detailConfigs
         };
         window.localStorage.setItem(DETAIL_CONFIG_STORAGE_KEY, JSON.stringify(payload));
@@ -487,6 +553,8 @@
       const tagValue = state.optionalFilters.tag.enabled ? state.optionalFilters.tag.value : "";
 
       return state.experiments.filter((experiment) => {
+        if (experiment.isDraft) return false;
+        if (experiment.isArchived) return false;
         if (keyword && !experiment.name.toLowerCase().includes(keyword)) return false;
         if (creatorKeyword && !String(experiment.creator || "").toLowerCase().includes(creatorKeyword)) return false;
         if (statusValue && experiment.status !== statusValue) return false;
@@ -605,6 +673,25 @@
         return;
       }
 
+      if (!isCaseExperiment(state.currentExperimentId)) {
+        metrics.forEach((metricName, metricIndex) => {
+          const card = document.createElement("article");
+          card.className = "online-result-metric-card";
+
+          const title = document.createElement("h4");
+          title.className = "online-result-metric-title";
+          title.textContent = String(metricIndex + 1) + ". " + metricName;
+          card.appendChild(title);
+
+          const emptyNode = document.createElement("div");
+          emptyNode.className = "online-result-empty";
+          emptyNode.textContent = "新建实验已生成该指标配置，暂无真实结果数据。";
+          card.appendChild(emptyNode);
+          container.appendChild(card);
+        });
+        return;
+      }
+
       metrics.forEach((metricName, metricIndex) => {
         container.appendChild(createResultMetricCard(metricName, metricType, metricIndex, config));
       });
@@ -708,21 +795,19 @@
         const node = document.createElement("div");
         node.className = "online-group-node";
 
-        if (index > 0) {
-          const flow = document.createElement("div");
-          flow.className = "online-group-flow";
+        const flow = document.createElement("div");
+        flow.className = "online-group-flow";
 
-          const flowLabel = document.createElement("span");
-          flowLabel.textContent = "分流百分比";
+        const flowLabel = document.createElement("span");
+        flowLabel.textContent = String(group.allocation) + "%";
 
-          const flowArrow = document.createElement("span");
-          flowArrow.className = "online-group-flow-arrow";
-          flowArrow.textContent = "→";
+        const flowArrow = document.createElement("span");
+        flowArrow.className = "online-group-flow-arrow";
+        flowArrow.textContent = "↓";
 
-          flow.appendChild(flowLabel);
-          flow.appendChild(flowArrow);
-          node.appendChild(flow);
-        }
+        flow.appendChild(flowLabel);
+        flow.appendChild(flowArrow);
+        node.appendChild(flow);
 
         const card = document.createElement("div");
         card.className = "online-group-card";
@@ -754,7 +839,7 @@
         ratioInput.addEventListener("change", () => {
           group.allocation = clampNumber(ratioInput.value, 0, 100, group.allocation);
           ratioInput.value = String(group.allocation);
-          renderGroupTotalHint(config);
+          renderGroupList();
         });
 
         const ratioSuffix = document.createElement("span");
@@ -800,10 +885,15 @@
       const config = ensureCurrentDetailConfig();
       if (!config) return;
 
+      const experiment = getExperimentById(state.currentExperimentId);
+      experimentNameInput.value = experiment ? String(experiment.name || "") : "";
       hypothesisInput.value = config.hypothesis || "";
       durationValueInput.value = String(config.durationValue);
       durationUnitSelect.value = config.durationUnit;
       trafficPercentInput.value = String(config.trafficPercent);
+      if (!Array.from(targetRuleInput.options).some((option) => option.value === config.targetRule)) {
+        config.targetRule = "所有环境";
+      }
       targetRuleInput.value = config.targetRule;
 
       renderMetricList("primary");
@@ -841,6 +931,49 @@
       renderResultPanel();
     }
 
+    function archiveExperiment(experiment) {
+      if (!canManageExperiment(experiment)) return;
+      experiment.isArchived = true;
+      if (state.currentExperimentId === experiment.id) {
+        state.currentExperimentId = "";
+      }
+      persistDetailConfigsToStorage();
+      renderExperimentTable();
+      renderTrashBox();
+    }
+
+    function restoreExperiment(experiment) {
+      if (!canManageExperiment(experiment)) return;
+      experiment.isArchived = false;
+      persistDetailConfigsToStorage();
+      renderExperimentTable();
+      renderTrashBox();
+    }
+
+    function permanentlyDeleteExperiment(experiment) {
+      if (!canManageExperiment(experiment) || !experiment.isArchived) return;
+      state.experiments = state.experiments.filter((item) => item.id !== experiment.id);
+      delete state.detailConfigs[experiment.id];
+      delete state.restoredExperimentIds[experiment.id];
+      if (state.currentExperimentId === experiment.id) {
+        state.currentExperimentId = "";
+      }
+      persistDetailConfigsToStorage();
+      renderExperimentTable();
+      renderTrashBox();
+    }
+
+    function createArchiveButton(experiment) {
+      const archiveButton = document.createElement("button");
+      archiveButton.type = "button";
+      archiveButton.className = "online-icon-btn";
+      archiveButton.textContent = "🗑";
+      archiveButton.setAttribute("aria-label", "归档实验");
+      archiveButton.title = "归档实验";
+      archiveButton.addEventListener("click", () => archiveExperiment(experiment));
+      return archiveButton;
+    }
+
     function renderExperimentTable() {
       const filteredExperiments = getFilteredExperiments();
       tableBody.replaceChildren();
@@ -859,7 +992,7 @@
         nameButton.type = "button";
         nameButton.className = "online-name-link";
         nameButton.textContent = experiment.name;
-        nameButton.addEventListener("click", () => openDetailPage(experiment));
+        nameButton.addEventListener("click", () => openDetailPage(experiment, { initialTab: "result" }));
         nameCell.appendChild(nameButton);
 
         const statusCell = document.createElement("td");
@@ -881,12 +1014,81 @@
         const creatorCell = document.createElement("td");
         creatorCell.textContent = experiment.creator || "--";
 
+        const archiveCell = document.createElement("td");
+        archiveCell.className = "online-archive-cell";
+        if (canManageExperiment(experiment)) {
+          archiveCell.appendChild(createArchiveButton(experiment));
+        } else {
+          archiveCell.textContent = "--";
+        }
+
         row.appendChild(nameCell);
         row.appendChild(statusCell);
         row.appendChild(durationCell);
         row.appendChild(tagsCell);
         row.appendChild(creatorCell);
+        row.appendChild(archiveCell);
         tableBody.appendChild(row);
+      });
+    }
+
+    function renderTrashBox() {
+      const archivedExperiments = getVisibleTrashExperiments();
+      trashCount.textContent = String(archivedExperiments.length);
+      trashPanel.classList.toggle("hidden", !state.trashOpen);
+      trashTableBody.replaceChildren();
+
+      if (!state.trashOpen) {
+        return;
+      }
+
+      if (!archivedExperiments.length) {
+        trashEmptyState.classList.remove("hidden");
+        return;
+      }
+      trashEmptyState.classList.add("hidden");
+
+      archivedExperiments.forEach((experiment) => {
+        const row = document.createElement("tr");
+
+        const nameCell = document.createElement("td");
+        nameCell.textContent = experiment.name || "--";
+
+        const statusCell = document.createElement("td");
+        statusCell.appendChild(createStatusElement(experiment.status));
+
+        const durationCell = document.createElement("td");
+        durationCell.textContent = experiment.durationText || "--";
+
+        const creatorCell = document.createElement("td");
+        creatorCell.textContent = experiment.creator || "--";
+
+        const actionCell = document.createElement("td");
+        const actionRow = document.createElement("div");
+        actionRow.className = "online-trash-action-row";
+
+        const restoreButton = document.createElement("button");
+        restoreButton.type = "button";
+        restoreButton.className = "online-restore-btn";
+        restoreButton.textContent = "恢复";
+        restoreButton.addEventListener("click", () => restoreExperiment(experiment));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "online-permanent-delete-btn";
+        deleteButton.textContent = "删除";
+        deleteButton.addEventListener("click", () => permanentlyDeleteExperiment(experiment));
+
+        actionRow.appendChild(restoreButton);
+        actionRow.appendChild(deleteButton);
+        actionCell.appendChild(actionRow);
+
+        row.appendChild(nameCell);
+        row.appendChild(statusCell);
+        row.appendChild(durationCell);
+        row.appendChild(creatorCell);
+        row.appendChild(actionCell);
+        trashTableBody.appendChild(row);
       });
     }
 
@@ -962,23 +1164,30 @@
       hideAllOnlinePages();
       experimentPage.classList.remove("hidden");
       renderExperimentTable();
+      renderTrashBox();
     }
 
     function openCreatePage() {
-      showOnlineShell();
-      hideAllOnlinePages();
-      createPage.classList.remove("hidden");
+      const experiment = createNewExperiment();
+      state.detailConfigs[experiment.id] = createDefaultDetailConfig(experiment);
+      openDetailPage(experiment, { initialTab: "settings", isNew: true });
     }
 
-    function openDetailPage(experiment) {
+    function openDetailPage(experiment, options) {
       showOnlineShell();
       hideAllOnlinePages();
       state.currentExperimentId = experiment.id;
-      detailBreadcrumbName.textContent = experiment.name;
-      ensureCurrentDetailConfig();
+      detailBreadcrumbName.textContent = experiment.name || "未命名实验";
+      const config = ensureCurrentDetailConfig();
+      if (config) {
+        config.activeTab = options && options.initialTab === "settings" ? "settings" : "result";
+      }
       renderDetailTabs();
       renderDetailSettings();
-      if (state.restoredExperimentIds[state.currentExperimentId]) {
+      renderResultPanel();
+      if (options && options.isNew) {
+        setHint(settingsSaveHint, "请补充主要指标、次要指标、持续时间后点击保存设置。", false);
+      } else if (state.restoredExperimentIds[state.currentExperimentId]) {
         setHint(settingsSaveHint, "已加载上次保存的设置，可继续修改后再次保存。", false);
       } else {
         setHint(settingsSaveHint, "修改后点击保存，下次进入可恢复当前实验配置。", false);
@@ -1005,6 +1214,23 @@
       state.optionalFilters[key].value = "";
       renderAddedFilters();
       renderExperimentTable();
+      renderTrashBox();
+    }
+
+    function validateRequiredSettings(config) {
+      if (!String(experimentNameInput.value || "").trim()) {
+        return "请填写实验名称。";
+      }
+      if (!config.primaryMetrics.length) {
+        return "请至少添加 1 个主要指标。";
+      }
+      if (!config.secondaryMetrics.length) {
+        return "请至少添加 1 个次要指标。";
+      }
+      if (!Number.isFinite(Number(config.durationValue)) || Number(config.durationValue) < 1) {
+        return "请填写有效的持续时间。";
+      }
+      return "";
     }
 
     detailTabButtons.forEach((button) => {
@@ -1075,7 +1301,7 @@
       config.trafficPercent = Math.round(clampNumber(trafficPercentInput.value, 0, 100, config.trafficPercent));
       trafficPercentInput.value = String(config.trafficPercent);
     });
-    targetRuleInput.addEventListener("blur", () => {
+    targetRuleInput.addEventListener("change", () => {
       const config = ensureCurrentDetailConfig();
       if (!config) return;
       config.targetRule = String(targetRuleInput.value || "").trim() || "所有环境";
@@ -1101,11 +1327,28 @@
         setHint(settingsSaveHint, "请先进入一个实验详情后再保存。", true);
         return;
       }
+      const requiredMessage = validateRequiredSettings(config);
+      if (requiredMessage) {
+        setHint(settingsSaveHint, requiredMessage, true);
+        return;
+      }
       syncCurrentExperimentDurationText();
+      const experiment = getExperimentById(state.currentExperimentId);
+      if (experiment) {
+        experiment.name = String(experimentNameInput.value || "").trim();
+        experiment.isDraft = false;
+        experiment.isArchived = false;
+        detailBreadcrumbName.textContent = experiment.name;
+      }
       state.restoredExperimentIds[state.currentExperimentId] = true;
       const saved = persistDetailConfigsToStorage();
       if (saved) {
         setHint(settingsSaveHint, "保存成功：" + buildSavedTimeText(), false);
+        if (!isCaseExperiment(state.currentExperimentId)) {
+          config.activeTab = "result";
+          renderDetailTabs();
+          renderResultPanel();
+        }
       }
     });
 
@@ -1115,6 +1358,10 @@
     detailBackHomeButton.addEventListener("click", goBackHomePage);
     detailBreadcrumbRootButton.addEventListener("click", openExperimentListPage);
     createButton.addEventListener("click", openCreatePage);
+    trashToggleButton.addEventListener("click", () => {
+      state.trashOpen = !state.trashOpen;
+      renderTrashBox();
+    });
     addFilterSelect.addEventListener("change", handleAddFilterSelectChange);
     searchButton.addEventListener("click", renderExperimentTable);
     searchInput.addEventListener("input", renderExperimentTable);
@@ -1123,6 +1370,7 @@
 
     renderAddedFilters();
     renderDetailTabs();
+    renderTrashBox();
   }
 
   window.AbOnlineExperiment = {

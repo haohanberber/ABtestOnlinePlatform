@@ -320,6 +320,104 @@ body {
   color: #64748b;
 }
 
+.online-archive-cell {
+  width: 68px;
+  text-align: center;
+}
+
+.online-icon-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.online-icon-btn:hover {
+  background: #fecaca;
+}
+
+.online-trash-section {
+  margin-top: 14px;
+}
+
+.online-trash-toggle-btn {
+  width: 100%;
+  justify-content: space-between;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.online-trash-toggle-btn:hover {
+  background: #eff6ff;
+}
+
+.online-trash-count {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.online-trash-panel {
+  margin-top: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.online-trash-table {
+  border: 0;
+}
+
+.online-trash-action-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.online-restore-btn,
+.online-permanent-delete-btn {
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.online-restore-btn {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.online-restore-btn:hover {
+  background: #bbf7d0;
+}
+
+.online-permanent-delete-btn {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.online-permanent-delete-btn:hover {
+  background: #fecaca;
+}
+
 .online-create-placeholder {
   margin-top: 14px;
   border: 1px dashed #cbd5e1;
@@ -539,6 +637,8 @@ body {
 .online-traffic-row {
   display: grid;
   gap: 8px;
+  width: min(520px, 100%);
+  margin: 0 auto;
 }
 
 .online-settings-line {
@@ -567,7 +667,7 @@ body {
 }
 
 .online-target-rule-input {
-  width: min(420px, 100%);
+  width: 220px;
   min-width: 220px;
   height: 36px;
   border: 1px solid #cbd5e1;
@@ -576,31 +676,79 @@ body {
   font-size: 13px;
 }
 
+.online-flow-stem {
+  width: 1px;
+  height: 28px;
+  margin: 14px auto 0;
+  background: #cbd5e1;
+}
+
+.online-split-node {
+  width: 110px;
+  height: 30px;
+  margin: 0 auto;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
 .online-group-scroll {
-  margin-top: 10px;
-  padding-bottom: 6px;
+  margin-top: 0;
+  padding: 18px 0 6px;
   overflow-x: auto;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 10px;
+  width: 100%;
 }
 
 .online-group-list {
   display: flex;
-  align-items: stretch;
-  gap: 10px;
-  flex: 0 0 auto;
+  align-items: flex-start;
+  gap: 40px;
+  justify-content: space-between;
+  flex: 1 0 auto;
+  min-width: max-content;
+  position: relative;
+  padding-top: 28px;
+}
+
+.online-group-list::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 140px;
+  right: 140px;
+  height: 1px;
+  background: #cbd5e1;
 }
 
 .online-group-node {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 0 0 auto;
+  position: relative;
+}
+
+.online-group-node::before {
+  content: "";
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  width: 1px;
+  height: 28px;
+  background: #cbd5e1;
 }
 
 .online-group-flow {
-  width: 84px;
+  width: auto;
+  min-width: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -612,7 +760,7 @@ body {
 
 .online-group-flow-arrow {
   color: #94a3b8;
-  font-size: 18px;
+  font-size: 14px;
   line-height: 1;
 }
 
@@ -673,13 +821,18 @@ body {
 }
 
 .online-group-add-btn {
-  flex: 0 0 140px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  margin-top: 66px;
   border: 1px dashed #93c5fd;
   background: #eff6ff;
   color: #1d4ed8;
-  border-radius: 10px;
-  font-size: 13px;
-  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
 }
 
 .online-group-add-btn:hover {
