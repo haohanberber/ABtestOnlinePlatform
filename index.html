@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AB测试在线平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <aside class="left-nav-column" aria-label="页面导航">
+      <button type="button" id="nav-ab-experiment-btn" class="left-nav-btn" title="A/B实验">
+        A/B
+      </button>
+    </aside>
+
+    <header class="hero">
+      <h1>AB测试在线平台</h1>
+      <p>支持实验设计、样本量估算与显著性判断。</p>
+      <div class="hero-top-right">
+        <div class="upload-panel-group">
+          <section class="upload-panel">
+            <div class="upload-panel-title">上传分桶ID数据集（用户ID/药店ID）</div>
+            <div class="upload-panel-row">
+              <input type="file" id="bucket-file-input" class="file-input-hidden" accept=".xlsx,.xls,.csv,.tsv,.txt" />
+              <label for="bucket-file-input" id="upload-bucket-btn" class="upload-btn upload-label">上传分桶ID数据集</label>
+              <button type="button" id="bucket-preview-btn" class="secondary-btn">预览</button>
+              <label class="upload-inline-field">
+                分桶数
+                <input type="number" id="bucket-count" min="2" max="100" step="1" value="4" />
+              </label>
+              <label class="upload-inline-field">
+                Seed
+                <input type="number" id="bucket-seed" step="1" value="233" />
+              </label>
+              <label class="upload-inline-field id-column-field">
+                ID列
+                <select id="bucket-id-column"></select>
+              </label>
+              <button type="button" id="run-bucket-btn" class="secondary-btn">执行分桶</button>
+              <button type="button" id="download-bucket-btn" class="secondary-btn" disabled>下载分桶Excel</button>
+            </div>
+            <div id="bucket-result-summary" class="upload-note muted">上传分桶数据后，选择ID列并点击“执行分桶”。</div>
+          </section>
+
+          <section class="upload-panel">
+            <div class="upload-panel-title">上传结果数据集（可预览）</div>
+            <div class="upload-panel-row">
+              <input type="file" id="result-file-input" class="file-input-hidden" accept=".xlsx,.xls,.csv,.tsv,.txt,.json" />
+              <label for="result-file-input" id="upload-result-btn" class="upload-btn upload-label">上传结果数据集</label>
+              <button type="button" id="result-preview-btn" class="secondary-btn">预览</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card">
+        <h2>实验设计助手</h2>
+        <form id="design-form" class="form-grid">
+          <label>
+            基准转化率（%）
+            <input type="number" id="baseline-rate" min="0.01" max="99.99" step="0.01" value="13" required />
+          </label>
+          <label>
+            期望转化率（%）
+            <input type="number" id="expected-rate" min="0.01" max="99.99" step="0.01" value="15" required />
+          </label>
+          <label>
+            显著性水平 α
+            <input type="number" id="alpha" min="0.001" max="0.2" step="0.001" value="0.05" required />
+          </label>
+          <label class="toggle-label">
+            检验类型
+            <div class="toggle-row">
+              <input type="checkbox" id="two-sided-test" checked />
+              <span id="test-type-text">双侧检验</span>
+            </div>
+          </label>
+          <label>
+            检验功效 Power（1-β）
+            <input type="number" id="power" min="0.5" max="0.99" step="0.01" value="0.8" required />
+          </label>
+          <label>
+            控制组与处理组比例（Control : Treatment）
+            <input type="number" id="group-ratio" min="0.1" step="0.1" value="1" required />
+          </label>
+          <button type="submit">设置完成</button>
+        </form>
+        <div id="design-result" class="result-box muted">设置参数后点击“设置完成”，将显示效果量和最小样本量。</div>
+      </section>
+
+      <section class="card">
+        <h2>A/B显著性检验（转化率 z 检验）</h2>
+        <form id="sig-form" class="form-grid">
+          <label>
+            A组访问人数
+            <input type="number" id="visitors-a" min="1" step="1" value="" required />
+          </label>
+          <label>
+            A组转化人数
+            <input type="number" id="conversions-a" min="0" step="1" value="" required />
+          </label>
+          <label>
+            B组访问人数
+            <input type="number" id="visitors-b" min="1" step="1" value="" required />
+          </label>
+          <label>
+            B组转化人数
+            <input type="number" id="conversions-b" min="0" step="1" value="" required />
+          </label>
+          <label>
+            每组抽样数量
+            <input type="number" id="sample-size-per-group" min="1" step="1" value="" />
+          </label>
+          <label>
+            抽样 Seed
+            <input type="number" id="sample-seed" step="1" value="233" />
+          </label>
+          <button type="button" id="sampling-mode-btn" class="secondary-btn">是否抽样：否（全量）</button>
+          <button type="button" id="load-case-data" class="secondary-btn">载入案例并计算</button>
+          <button type="submit">执行显著性检验</button>
+        </form>
+        <div id="sig-param-hint" class="muted">请先上传结果数据集并在实验设计助手点击“设置完成”，再生成A/B检验参数。</div>
+        <div id="sig-result" class="result-box muted">填写A/B数据后点击“执行显著性检验”。</div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>提示：本页面用于实验前评估与结果初判，关键实验建议由数据科学团队复核后发布。</p>
+    </footer>
+
+    <section id="online-experiment-page" class="online-page hidden" aria-label="在线实验页面">
+      <div class="online-page-header">
+        <div class="online-breadcrumb" aria-label="页面层级">
+          <span class="online-breadcrumb-current">Experiment 实验</span>
+        </div>
+        <button type="button" id="online-back-home-btn" class="online-back-home-btn">返回首页</button>
+      </div>
+
+      <div class="online-toolbar">
+        <button type="button" id="online-create-experiment-btn" class="online-create-btn">创建实验</button>
+
+        <div class="online-toolbar-right">
+          <div class="online-search-wrap">
+            <button type="button" id="online-search-trigger-btn" class="online-search-btn" aria-label="搜索实验">🔍</button>
+            <input type="text" id="online-search-input" placeholder="搜索实验名称" />
+          </div>
+
+          <label class="online-filter-item">
+            创建人
+            <input type="text" id="online-creator-search-input" class="online-creator-search-input" placeholder="搜索人名" />
+          </label>
+
+          <label class="online-filter-item">
+            状态
+            <select id="online-filter-status">
+              <option value="">全部</option>
+              <option value="未开始">未开始</option>
+              <option value="进行中">进行中</option>
+              <option value="已暂停">已暂停</option>
+              <option value="已完成">已完成</option>
+              <option value="已结束">已结束</option>
+            </select>
+          </label>
+
+          <label class="online-filter-item">
+            添加筛选项
+            <select id="online-add-filter-select">
+              <option value="">请选择</option>
+              <option value="analysisType">分析类型</option>
+              <option value="tag">标签</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div id="online-added-filters" class="online-added-filters hidden"></div>
+
+      <section class="online-list-card">
+        <table class="online-table">
+          <thead>
+            <tr>
+              <th>实验名称</th>
+              <th>状态</th>
+              <th>持续时间</th>
+              <th>标签</th>
+              <th>创建人</th>
+            </tr>
+          </thead>
+          <tbody id="online-experiment-table-body"></tbody>
+        </table>
+        <div id="online-empty-state" class="online-empty-state hidden">暂无符合条件的实验。</div>
+      </section>
+    </section>
+
+    <section id="online-experiment-create-page" class="online-page hidden" aria-label="创建实验页面">
+      <div class="online-page-header">
+        <div class="online-breadcrumb" aria-label="页面层级">
+          <span class="online-breadcrumb-current">Experiment 实验 / 创建实验</span>
+        </div>
+        <button type="button" id="online-create-back-list-btn" class="online-back-home-btn">返回实验列表</button>
+      </div>
+      <div class="online-create-placeholder">
+        当前版本仅跳转到创建页占位，不会真正创建实验。
+      </div>
+    </section>
+
+    <section id="online-experiment-detail-page" class="online-page hidden" aria-label="实验详情页面">
+      <div class="online-page-header">
+        <div class="online-breadcrumb" aria-label="页面层级">
+          <button type="button" id="online-detail-breadcrumb-root-btn" class="online-breadcrumb-link">Experiment 实验</button>
+          <span class="online-breadcrumb-sep">/</span>
+          <span id="online-detail-breadcrumb-name" class="online-breadcrumb-current"></span>
+        </div>
+        <button type="button" id="online-detail-back-home-btn" class="online-back-home-btn">返回首页</button>
+      </div>
+
+      <div class="online-detail-shell">
+        <div class="online-detail-tabs" role="tablist" aria-label="实验详情页签">
+          <button type="button" class="online-detail-tab-btn active" data-tab="settings" role="tab" aria-selected="true">设置</button>
+          <button type="button" class="online-detail-tab-btn" data-tab="result" role="tab" aria-selected="false">结果</button>
+          <button type="button" class="online-detail-tab-btn" data-tab="summary" role="tab" aria-selected="false">摘要</button>
+        </div>
+
+        <section class="online-detail-panel" data-tab-panel="settings">
+          <div class="online-settings-block">
+            <h3>假说</h3>
+            <label class="online-hypothesis-field">
+              <span class="online-hypothesis-label">实验假说</span>
+              <textarea
+                id="online-hypothesis-input"
+                class="online-hypothesis-input"
+                placeholder="请输入实验假说，例如：实验组相较于对照组购买事件提升 10%"
+              ></textarea>
+            </label>
+          </div>
+
+          <div class="online-settings-block">
+            <h3>主要指标</h3>
+            <div class="online-metric-inline">
+              <input type="text" id="online-primary-metric-input" class="online-short-input online-metric-input" placeholder="输入主要指标后点击添加" />
+              <select id="online-primary-metric-preset-select" class="online-short-input online-metric-preset-select">
+                <option value="">选择默认指标</option>
+              </select>
+              <button type="button" id="online-primary-metric-add-btn" class="online-secondary-btn">添加</button>
+              <span id="online-primary-metric-hint" class="online-inline-hint">已添加 0/10 个</span>
+            </div>
+            <div id="online-primary-metric-list" class="online-metric-list"></div>
+          </div>
+
+          <div class="online-settings-block">
+            <h3>次要指标</h3>
+            <div class="online-metric-inline">
+              <input type="text" id="online-secondary-metric-input" class="online-short-input online-metric-input" placeholder="输入次要指标后点击添加" />
+              <select id="online-secondary-metric-preset-select" class="online-short-input online-metric-preset-select">
+                <option value="">选择默认指标</option>
+              </select>
+              <button type="button" id="online-secondary-metric-add-btn" class="online-secondary-btn">添加</button>
+              <span id="online-secondary-metric-hint" class="online-inline-hint">已添加 0/10 个</span>
+            </div>
+            <div id="online-secondary-metric-list" class="online-metric-list"></div>
+          </div>
+
+          <div class="online-settings-block">
+            <h3>持续时间</h3>
+            <div class="online-duration-row">
+              <input type="number" id="online-duration-value-input" class="online-short-input online-duration-input" min="1" max="3650" step="1" value="14" />
+              <select id="online-duration-unit-select" class="online-short-input online-duration-select">
+                <option value="日">日</option>
+                <option value="周">周</option>
+                <option value="月">月</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="online-settings-block">
+            <h3>分组和参数</h3>
+            <div class="online-traffic-row">
+              <label class="online-settings-line">
+                <span class="online-line-title">分流</span>
+                <span>本次将用于实验的用户ID的百分比为</span>
+                <input type="number" id="online-traffic-percent-input" class="online-short-input online-traffic-input" min="0" max="100" step="1" value="100" />
+                <span>%</span>
+              </label>
+              <label class="online-settings-line">
+                <span class="online-line-title">目标</span>
+                <span>定向规则</span>
+                <input type="text" id="online-target-rule-input" class="online-target-rule-input" value="所有环境" />
+              </label>
+            </div>
+
+            <div class="online-group-scroll" id="online-group-scroll">
+              <div id="online-group-list" class="online-group-list"></div>
+              <button type="button" id="online-add-group-btn" class="online-group-add-btn">+ 新增分组</button>
+            </div>
+            <div id="online-group-total-hint" class="online-inline-hint">当前分组分流合计 100%（已平衡）</div>
+          </div>
+
+          <div class="online-settings-actions">
+            <button type="button" id="online-settings-save-btn" class="online-settings-save-btn">保存设置</button>
+            <span id="online-settings-save-hint" class="online-inline-hint">修改后点击保存，下次进入可恢复当前实验配置。</span>
+          </div>
+        </section>
+
+        <section class="online-detail-panel hidden" data-tab-panel="result">
+          <div class="online-result-block">
+            <h3>假说</h3>
+            <div id="online-result-hypothesis" class="online-result-hypothesis muted">
+              暂未填写实验假说，请先在设置区补充。
+            </div>
+          </div>
+
+          <div class="online-result-block">
+            <h3>主要指标</h3>
+            <div id="online-result-primary-metrics" class="online-result-metrics"></div>
+          </div>
+
+          <div class="online-result-block">
+            <h3>次要指标</h3>
+            <div id="online-result-secondary-metrics" class="online-result-metrics"></div>
+          </div>
+        </section>
+
+        <section class="online-detail-panel hidden" data-tab-panel="summary">
+          <div class="online-detail-placeholder">摘要区当前为占位模块，后续可接入实验结论与建议动作。</div>
+        </section>
+      </div>
+    </section>
+
+    <div id="dataset-preview-overlay" class="dataset-preview-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="dataset-preview-title">
+      <section class="dataset-preview-modal">
+        <button type="button" id="dataset-preview-close-btn" class="dataset-preview-close-btn" aria-label="关闭预览">×</button>
+        <h3 id="dataset-preview-title">数据集预览（前10行）</h3>
+        <div id="dataset-preview-empty" class="dataset-preview-empty hidden"></div>
+        <div id="dataset-preview-table-wrap" class="dataset-preview-table-wrap">
+          <table id="dataset-preview-table" class="dataset-preview-table"></table>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="./features/online-experiment/runtime.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
