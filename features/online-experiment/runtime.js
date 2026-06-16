@@ -105,9 +105,25 @@
 
   function initOnlineExperimentPage() {
     const navButton = document.getElementById("nav-ab-experiment-btn");
+    const dataNavButton = document.getElementById("nav-data-btn");
+    const dataMetricButton = document.getElementById("nav-data-metric-btn");
+    const dataDatabaseButton = document.getElementById("nav-data-database-btn");
     const experimentPage = document.getElementById("online-experiment-page");
     const createPage = document.getElementById("online-experiment-create-page");
     const detailPage = document.getElementById("online-experiment-detail-page");
+    const dataMetricPage = document.getElementById("data-metric-page");
+    const dataDatabasePage = document.getElementById("data-database-page");
+    const dataConnectStartButton = document.getElementById("data-connect-start-btn");
+    const dataIngestionOverlay = document.getElementById("data-ingestion-overlay");
+    const dataIngestionCloseButton = document.getElementById("data-ingestion-close-btn");
+    const dataIngestionCancelButton = document.getElementById("data-ingestion-cancel-btn");
+    const dataIngestionOptions = Array.from(document.querySelectorAll(".data-ingestion-option"));
+    const dataSelectedFilters = document.getElementById("data-selected-filters");
+    const dataFilter = document.querySelector(".data-filter");
+    const dataMetricSearchInput = document.getElementById("data-metric-search-input");
+    const dataFilterSearchInput = document.querySelector(".data-filter-search input");
+    const dataFilterOptions = Array.from(document.querySelectorAll(".data-filter-option"));
+    const dataMetricRows = Array.from(document.querySelectorAll(".data-metric-table tbody tr"));
     const hero = document.querySelector(".hero");
     const container = document.querySelector(".container");
     const footer = document.querySelector(".footer");
@@ -1145,22 +1161,28 @@
       });
     }
 
-    function showOnlineShell() {
+    function showOnlineShell(activeButton) {
       hero.classList.add("hidden");
       container.classList.add("hidden");
       footer.classList.add("hidden");
       document.body.classList.add("online-page-open");
-      navButton.classList.add("active");
+      [navButton, dataNavButton].forEach((button) => {
+        if (button) {
+          button.classList.toggle("active", button === activeButton);
+        }
+      });
     }
 
     function hideAllOnlinePages() {
       experimentPage.classList.add("hidden");
       createPage.classList.add("hidden");
       detailPage.classList.add("hidden");
+      if (dataMetricPage) dataMetricPage.classList.add("hidden");
+      if (dataDatabasePage) dataDatabasePage.classList.add("hidden");
     }
 
     function openExperimentListPage() {
-      showOnlineShell();
+      showOnlineShell(navButton);
       hideAllOnlinePages();
       experimentPage.classList.remove("hidden");
       renderExperimentTable();
@@ -1174,7 +1196,7 @@
     }
 
     function openDetailPage(experiment, options) {
-      showOnlineShell();
+      showOnlineShell(navButton);
       hideAllOnlinePages();
       state.currentExperimentId = experiment.id;
       detailBreadcrumbName.textContent = experiment.name || "未命名实验";
@@ -1195,6 +1217,39 @@
       detailPage.classList.remove("hidden");
     }
 
+    function openDataPage(page) {
+      if (!page) return;
+      showOnlineShell(dataNavButton);
+      hideAllOnlinePages();
+      page.classList.remove("hidden");
+    }
+
+    function setDataIngestionOpen(isOpen) {
+      if (!dataIngestionOverlay) return;
+      dataIngestionOverlay.classList.toggle("hidden", !isOpen);
+    }
+
+    function closeDataIngestionByBackdrop(event) {
+      if (event.target === dataIngestionOverlay) {
+        setDataIngestionOpen(false);
+      }
+    }
+
+    function closeDataIngestionByEsc(event) {
+      if (event.key === "Escape" && dataIngestionOverlay && !dataIngestionOverlay.classList.contains("hidden")) {
+        setDataIngestionOpen(false);
+      }
+    }
+
+    function selectDataIngestionOption(option) {
+      if (!option || option.classList.contains("disabled")) return;
+      const input = option.querySelector('input[type="radio"]');
+      if (input) input.checked = true;
+      dataIngestionOptions.forEach((item) => {
+        item.classList.toggle("selected", item === option);
+      });
+    }
+
     function goBackHomePage() {
       hideAllOnlinePages();
       hero.classList.remove("hidden");
@@ -1202,6 +1257,151 @@
       footer.classList.remove("hidden");
       document.body.classList.remove("online-page-open");
       navButton.classList.remove("active");
+      if (dataNavButton) dataNavButton.classList.remove("active");
+    }
+
+    const dataMetricFilterOptions = {
+      tag: {
+        label: "标签",
+        options: ["核心", "结账团队", "高优先级", "增长", "转化", "留存", "收入", "实验", "自定义", "待确认"]
+      },
+      type: {
+        label: "类型",
+        options: ["事件计数", "用户", "漏斗", "单位数量", "事件计数（自定义）", "总和", "平均值", "比率", "百分位数", "设置未完成"]
+      },
+      source: {
+        label: "来源",
+        options: ["埋点事件", "导入数据集", "计算指标", "系统预置", "自定义SQL", "实验结果"]
+      },
+      creator: {
+        label: "创作者",
+        options: ["当前用户", "项目管理员", "数据团队", "产品团队", "运营团队"]
+      },
+      status: {
+        label: "状态",
+        options: ["可用", "草稿", "待审核", "已停用", "设置未完成"]
+      },
+      team: {
+        label: "团队",
+        options: ["核心团队", "增长团队", "数据科学团队", "运营团队", "产品团队", "结账团队", "商业化团队"]
+      }
+    };
+
+    function getSelectedDataMetricFilters() {
+      if (!dataSelectedFilters) return [];
+
+      return Array.from(dataSelectedFilters.querySelectorAll(".data-filter-chip"))
+        .map((chip) => {
+          const key = String(chip.dataset.filterChipKey || "");
+          const values = Array.from(chip.querySelectorAll('input[type="checkbox"]:checked'))
+            .map((input) => String(input.value || "").trim())
+            .filter(Boolean);
+          return { key: key, values: values };
+        })
+        .filter((item) => item.key && item.values.length > 0);
+    }
+
+    function filterDataMetricRows() {
+      const filters = getSelectedDataMetricFilters();
+      const searchText = dataMetricSearchInput ? String(dataMetricSearchInput.value || "").trim().toLowerCase() : "";
+
+      dataMetricRows.forEach((row) => {
+        const rowText = String(row.textContent || "").toLowerCase();
+        const matchesSearch = !searchText || rowText.includes(searchText);
+        const matchesFilters = filters.every((filter) => {
+          const rowValue = String(row.dataset["filter" + filter.key.charAt(0).toUpperCase() + filter.key.slice(1)] || "").trim();
+          return filter.values.includes(rowValue);
+        });
+        row.classList.toggle("hidden", !(matchesSearch && matchesFilters));
+      });
+    }
+
+    function openDataMetricFilterChip(key) {
+      if (!dataSelectedFilters || !dataMetricFilterOptions[key]) return;
+
+      const existingChip = dataSelectedFilters.querySelector('[data-filter-chip-key="' + key + '"]');
+      if (existingChip) {
+        existingChip.open = true;
+        return;
+      }
+
+      const meta = dataMetricFilterOptions[key];
+      const chip = document.createElement("details");
+      chip.className = "data-filter-chip";
+      chip.dataset.filterChipKey = key;
+      chip.open = true;
+
+      const summary = document.createElement("summary");
+      summary.className = "data-filter-chip-summary";
+
+      const label = document.createElement("span");
+      label.className = "data-filter-chip-label";
+      label.textContent = meta.label;
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "data-filter-chip-remove";
+      removeButton.setAttribute("aria-label", "移除" + meta.label + "筛选项");
+      removeButton.textContent = "×";
+      removeButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        chip.remove();
+        filterDataMetricRows();
+      });
+
+      summary.appendChild(label);
+      summary.appendChild(removeButton);
+
+      const panel = document.createElement("div");
+      panel.className = "data-filter-chip-panel";
+      meta.options.forEach((optionText) => {
+        const choice = document.createElement("label");
+        choice.className = "data-filter-chip-choice";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = optionText;
+        checkbox.addEventListener("change", filterDataMetricRows);
+
+        const text = document.createElement("span");
+        text.textContent = optionText;
+
+        choice.appendChild(checkbox);
+        choice.appendChild(text);
+        panel.appendChild(choice);
+      });
+
+      chip.appendChild(summary);
+      chip.appendChild(panel);
+      dataSelectedFilters.appendChild(chip);
+    }
+
+    function initDataMetricFilterControls() {
+      if (!dataSelectedFilters || !dataFilterOptions.length) return;
+
+      dataFilterOptions.forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = String(button.dataset.filterKey || "");
+          openDataMetricFilterChip(key);
+          if (dataFilter) dataFilter.open = false;
+          filterDataMetricRows();
+        });
+      });
+
+      if (dataMetricSearchInput) {
+        dataMetricSearchInput.addEventListener("input", filterDataMetricRows);
+      }
+
+      if (dataFilterSearchInput) {
+        dataFilterSearchInput.addEventListener("input", () => {
+          const query = String(dataFilterSearchInput.value || "").trim().toLowerCase();
+          dataFilterOptions.forEach((button) => {
+            const text = String(button.textContent || "").trim().toLowerCase();
+            button.classList.toggle("hidden", !!query && !text.includes(query));
+          });
+        });
+      }
     }
 
     function handleAddFilterSelectChange() {
@@ -1353,6 +1553,28 @@
     });
 
     navButton.addEventListener("click", openExperimentListPage);
+    if (dataMetricButton) {
+      dataMetricButton.addEventListener("click", () => openDataPage(dataMetricPage));
+    }
+    if (dataDatabaseButton) {
+      dataDatabaseButton.addEventListener("click", () => openDataPage(dataDatabasePage));
+    }
+    if (dataConnectStartButton) {
+      dataConnectStartButton.addEventListener("click", () => setDataIngestionOpen(true));
+    }
+    if (dataIngestionOverlay) {
+      dataIngestionOverlay.addEventListener("click", closeDataIngestionByBackdrop);
+    }
+    if (dataIngestionCloseButton) {
+      dataIngestionCloseButton.addEventListener("click", () => setDataIngestionOpen(false));
+    }
+    if (dataIngestionCancelButton) {
+      dataIngestionCancelButton.addEventListener("click", () => setDataIngestionOpen(false));
+    }
+    dataIngestionOptions.forEach((option) => {
+      option.addEventListener("click", () => selectDataIngestionOption(option));
+    });
+    document.addEventListener("keydown", closeDataIngestionByEsc);
     backHomeButton.addEventListener("click", goBackHomePage);
     backListButton.addEventListener("click", openExperimentListPage);
     detailBackHomeButton.addEventListener("click", goBackHomePage);
@@ -1371,6 +1593,7 @@
     renderAddedFilters();
     renderDetailTabs();
     renderTrashBox();
+    initDataMetricFilterControls();
   }
 
   window.AbOnlineExperiment = {
