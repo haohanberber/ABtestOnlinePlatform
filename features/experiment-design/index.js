@@ -9,6 +9,7 @@ function handleDesignSubmit(event) {
   const isTwoSided = document.getElementById("two-sided-test").checked;
   const power = Number(document.getElementById("power").value);
   const controlToTreatmentRatio = Number(document.getElementById("group-ratio").value);
+  const dailyUv = Number(document.getElementById("daily-uv").value);
   const result = document.getElementById("design-result");
 
   if (
@@ -23,6 +24,10 @@ function handleDesignSubmit(event) {
     controlToTreatmentRatio <= 0
   ) {
     setResult(result, "参数非法：请确认转化率、显著性水平、功效与组间比例均在合理范围。", "warn");
+    return;
+  }
+  if (!Number.isFinite(dailyUv) || dailyUv <= 0) {
+    setResult(result, "参数非法：请填写大于0的日均UV。", "warn");
     return;
   }
 
@@ -50,6 +55,8 @@ function handleDesignSubmit(event) {
   const minControlSample = Math.ceil(numerator / denominator);
   const minTreatmentSample = Math.ceil(minControlSample / controlToTreatmentRatio);
   const totalSampleNeeded = minControlSample + minTreatmentSample;
+  const treatmentTrafficShare = 1 / (controlToTreatmentRatio + 1);
+  const experimentDays = Math.ceil(totalSampleNeeded / (dailyUv * treatmentTrafficShare));
   const minSamplePerGroup = Math.ceil(Math.max(minControlSample, minTreatmentSample));
   const trendText = effectAbs >= 0 ? "提升" : "下降";
   const relPrefix = effectRel >= 0 ? "+" : "";
@@ -61,6 +68,7 @@ function handleDesignSubmit(event) {
     `效果量（Cohen's h，statsmodels口径）：${effectH.toFixed(4)}`,
     `最小样本量：控制组 ${minControlSample.toLocaleString()} 人，处理组 ${minTreatmentSample.toLocaleString()} 人`,
     `最小总样本量：${totalSampleNeeded.toLocaleString()} 人`,
+    `实验天数（向上取整）：${experimentDays.toLocaleString()} 天`,
     `参数：基准=${pct(p1)}，期望=${pct(p2)}，alpha=${alpha}，power=${power}，Control:Treatment=${controlToTreatmentRatio}:1，${testTypeText}`,
     "说明：该估算基于两比例检验的正态近似，并根据单侧/双侧设置调整临界值。"
   ].join("\n");
@@ -72,7 +80,9 @@ function handleDesignSubmit(event) {
         alpha,
         minControlSample,
         minTreatmentSample,
-        minSamplePerGroup
+        minSamplePerGroup,
+        dailyUv,
+        experimentDays
       }
     })
   );

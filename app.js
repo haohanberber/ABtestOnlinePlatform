@@ -770,10 +770,15 @@
       const isTwoSided = document.getElementById("two-sided-test").checked;
       const power = Number(document.getElementById("power").value);
       const ratio = Number(document.getElementById("group-ratio").value);
+      const dailyUv = Number(document.getElementById("daily-uv").value);
       const result = document.getElementById("design-result");
 
       if (baseline <= 0 || baseline >= 1 || expected <= 0 || expected >= 1 || alpha <= 0 || alpha >= 1 || power <= 0 || power >= 1 || ratio <= 0) {
         setResult(result, "参数非法：请确认转化率、显著性水平、功效与组间比例均在合理范围。", "warn");
+        return;
+      }
+      if (!Number.isFinite(dailyUv) || dailyUv <= 0) {
+        setResult(result, "参数非法：请填写大于0的日均UV。", "warn");
         return;
       }
       if (expected === baseline) {
@@ -796,6 +801,8 @@
       const minControlSample = Math.ceil(numerator / denominator);
       const minTreatmentSample = Math.ceil(minControlSample / ratio);
       const total = minControlSample + minTreatmentSample;
+      const treatmentTrafficShare = 1 / (ratio + 1);
+      const experimentDays = Math.ceil(total / (dailyUv * treatmentTrafficShare));
       const rel = effectAbs / p1;
       const minSamplePerGroup = Math.ceil(Math.max(minControlSample, minTreatmentSample));
       const msg = [
@@ -803,7 +810,8 @@
         "效果量（相对变化）：" + (rel >= 0 ? "+" : "") + (rel * 100).toFixed(2) + "%",
         "效果量（Cohen's h）：" + effectH.toFixed(4),
         "最小样本量：控制组 " + minControlSample.toLocaleString() + " 人，处理组 " + minTreatmentSample.toLocaleString() + " 人",
-        "最小总样本量：" + total.toLocaleString() + " 人"
+        "最小总样本量：" + total.toLocaleString() + " 人",
+        "实验天数（向上取整）：" + experimentDays.toLocaleString() + " 天"
       ].join("\n");
       setResult(result, msg, "success");
 
@@ -811,7 +819,9 @@
         alpha: alpha,
         minControlSample: minControlSample,
         minTreatmentSample: minTreatmentSample,
-        minSamplePerGroup: minSamplePerGroup
+        minSamplePerGroup: minSamplePerGroup,
+        dailyUv: dailyUv,
+        experimentDays: experimentDays
       };
       document.dispatchEvent(new CustomEvent("ab-design-ready", { detail: state.design }));
       syncSamplingUi();
