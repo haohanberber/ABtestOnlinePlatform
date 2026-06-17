@@ -1429,7 +1429,7 @@ button.data-connect-start-btn:hover {
 
 .hero-top-right {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   margin-top: 18px;
 }
 
@@ -1437,14 +1437,12 @@ button.data-connect-start-btn:hover {
   width: min(980px, 100%);
   display: grid;
   gap: 10px;
+  justify-items: center;
 }
 
 .upload-panel {
-  text-align: left;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(30, 64, 175, 0.36);
-  padding: 10px;
+  width: 100%;
+  text-align: center;
 }
 
 .upload-panel-title {
@@ -1457,6 +1455,7 @@ button.data-connect-start-btn:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -1489,6 +1488,10 @@ button.data-connect-start-btn:hover {
   color: #dbeafe;
   line-height: 1.55;
   white-space: pre-line;
+}
+
+#bucket-result-summary {
+  color: #111827;
 }
 
 .upload-btn {
@@ -2223,7 +2226,7 @@ button:hover {
   }
 
   .hero-top-right {
-    justify-content: flex-end;
+    justify-content: center;
   }
 
   .upload-panel-row {
